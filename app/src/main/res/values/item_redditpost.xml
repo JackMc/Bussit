@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="filler_subreddit_name">/r/programming</string>
+    <string name="filler_post_title">Post Title Filler</string>
+</resources>

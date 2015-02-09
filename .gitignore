@@ -1,0 +1,8 @@
+.gradle
+/local.properties
+/.idea/workspace.xml
+/.idea/libraries
+.DS_Store
+/build
+# Contains app id and things. ;)
+app/src/main/res/values/secure.xml
