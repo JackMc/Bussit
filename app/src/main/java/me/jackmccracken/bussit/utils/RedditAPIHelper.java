@@ -3,7 +3,7 @@ package me.jackmccracken.bussit.utils;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.net.http.AndroidHttpClient;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.util.Base64;
 import android.util.Log;
@@ -12,11 +12,13 @@ import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
@@ -27,13 +29,14 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Random;
 
 import me.jackmccracken.bussit.R;
+import me.jackmccracken.bussit.models.Post;
 
 /**
  * Created by jack on 05/02/15.
@@ -56,15 +59,10 @@ public class RedditAPIHelper {
     private static final String REQUEST_SCOPE = "read";
     // Our HTTP user agent
     private static final String USER_AGENT = "Bussit by /u/Auv5";
-
-    // The string of the API endpoint to cache (currently nothing cause we want to get the homepage
-    private static final String REQUEST_TYPE = "";
     private static final int STATE_STRING_LENGTH = 16;
 
-    /**
-     * A randomly generated String used for stateful communication with the Reddit servers.
-     */
-    private String stateString;
+    private static final String API_DOMAIN = "oauth.reddit.com";
+    private static final String API_PROTOCOL = "https";
 
     /**
      * A token given to us by the Reddit servers. Used for when we need to refresh our authorization
@@ -75,6 +73,24 @@ public class RedditAPIHelper {
      * The token we usually pass to the server to tell it we are us.
      */
     private String token;
+    /**
+     * The time in epoch seconds when the current token will expire
+     */
+    private long expires;
+
+    /**
+     * A queue of async operations which will be ran once the refresh
+     * has occurred
+     */
+    private Queue<AsyncTask<Void, Void, ?>> ops;
+
+    /**
+     * True if we are currently refreshing in any state.
+     */
+    private boolean refreshing = false;
+
+
+    private String stateString;
 
     /**
      * Initializes a Reddit API helper.
@@ -83,6 +99,7 @@ public class RedditAPIHelper {
      */
     public RedditAPIHelper(String refreshToken) {
         this.refreshToken = refreshToken;
+        ops = new LinkedList<>();
         setInstance(this);
     }
 
@@ -179,6 +196,177 @@ public class RedditAPIHelper {
     }
 
     /**
+     * Sets up the request for OAuth
+     *
+     * @param request The request that will be sent to the server.
+     */
+    private void setupTokenAuthHeaders(HttpRequest request) {
+        setupUserAgent(request);
+
+        request.setHeader("Authorization", "bearer " + token);
+    }
+
+    /**
+     * Checks if we need to refresh the token
+     *
+     * @param c The context in which the request was made.
+     */
+    private void checkNeedRefresh(Context c) {
+        // expires is the time when our token will become invalid
+        if (this.expires < System.currentTimeMillis()) {
+            refreshPermissions(c);
+        }
+
+        checkAndExecuteQueue();
+    }
+
+    /**
+     * Goes through and executes any pending tasks.
+     */
+    private void checkAndExecuteQueue() {
+        // We loop and execute all the tasks that are waiting in threads.
+        while (!ops.isEmpty()) {
+            AsyncTask<Void, Void, ?> task = ops.poll();
+
+            task.execute();
+        }
+    }
+
+    /**
+     * Sets up the basic auth parameters
+     * @param request The request that will be sent to the server.
+     * @param c The context in which the request was made.
+     */
+    private void setupBasicAuthHeaders(HttpRequest request, Context c) {
+        setupUserAgent(request);
+
+        // Start HTTP auth (app id + : + empty pw)
+        // Source: https://github.com/reddit/reddit/wiki/OAuth2 (search for "HTTP Basic Auth")
+        // Code Source: http://blog.leocad.io/basic-http-authentication-on-android/
+        String credentials = c.getString(R.string.reddit_app_id) + ":";
+
+        // Put the credentials into a base64 string.
+        String base64Credentials = Base64.encodeToString(credentials.getBytes(), Base64.NO_WRAP);
+        request.addHeader("Authorization", "Basic " + base64Credentials);
+    }
+
+    /**
+     * Sets up the User Agent because Reddit doesn't like the standard one.
+     *
+     * @param request The request that will be sent to the server.
+     */
+    private void setupUserAgent(HttpRequest request) {
+        // Set the user agent because Reddit doesn't like the standard one.
+        request.setHeader("User-Agent", USER_AGENT);
+    }
+
+    private String getAPIEndpoint(String endpoint, NameValuePair...params) {
+        Uri.Builder builder = new Uri.Builder().scheme("https")
+                                .authority("oauth.reddit.com")
+                                .path(endpoint);
+        for (NameValuePair p : params) {
+            builder.appendQueryParameter(p.getName(), p.getValue());
+        }
+
+        return builder.toString();
+    }
+
+    private void enqueueTask(AsyncTask<Void, Void, ?> task) {
+        ops.add(task);
+    }
+
+    /**
+     * Defines a task which will be executed <b>on the main thread</b> after the execution of a
+     * Reddit API call.
+     * @param <T> The data to be returned from the server.
+     */
+    public interface AfterCallTask<T> {
+        /**
+         * Called after a success.
+         * @param param A function-defined parameter.
+         */
+        public void run(T param);
+
+        /**
+         * Called if the operation fails.
+         *
+         * @param message A user-readable message to be displayed if it is appropriate.
+         */
+        public void fail(String message);
+    }
+
+    /**
+     *
+     * @param c The context in which the request was made.
+     * @param after Will be executed after
+     */
+    public void getHot(final Context c, final AfterCallTask<List<Post>> after) {
+        AsyncTask<Void, Void, List<Post>> getHotTask = new AsyncTask<Void, Void, List<Post>>() {
+            /**
+             * A string containing a message explaining what went wrong. Should be user readable.
+             */
+            String message = null;
+
+            @Override
+            protected List<Post> doInBackground(Void... voids) {
+                try {
+                    HttpClient client = new DefaultHttpClient();
+
+                    HttpGet get = new HttpGet(getAPIEndpoint("hot"));
+
+                    List<Post> posts = new ArrayList<>();
+
+                    setupUserAgent(get);
+                    setupTokenAuthHeaders(get);
+                    HttpResponse response = client.execute(get);
+
+                    int code = response.getStatusLine().getStatusCode();
+
+                    if (code != HttpStatus.SC_OK) {
+                        message = String.format(c.getString(R.string.api_bad_response_code), code);
+                        return null;
+                    }
+
+                    HttpEntity entity = response.getEntity();
+
+                    if (entity != null) {
+                        JSONObject object = new JSONObject(convertToString(entity.getContent()));
+
+                         String responseText = object.toString();
+
+                        BasicUtils.logLong(Log.ERROR, "Result", responseText);
+                    }
+                } catch (IOException | JSONException e) {
+                    //TODO: Nicer error messages.
+                    message = e.getMessage();
+                    return null;
+                }
+
+
+                return null;
+            }
+
+            @Override
+            protected void onPostExecute(List<Post> returnValue) {
+                // We got data back from the server!
+                if (returnValue != null) {
+                    after.run(returnValue);
+                }
+                else {
+                    // The network failed or something else happened :(
+                    // Notify the caller.
+                    after.fail(message);
+                }
+            }
+        };
+
+        enqueueTask(getHotTask);
+
+        // Check if we need to refresh the OAuth. This will also execute us after.
+        checkNeedRefresh(c);
+    }
+
+    /**
      * Retrieves the tokens from the Reddit server using the code given.
      * @param code The code from the auth page.
      */
@@ -195,15 +383,8 @@ public class RedditAPIHelper {
 
             HttpPost post = new HttpPost("https://www.reddit.com/api/v1/access_token");
             post.setEntity(new UrlEncodedFormEntity(params));
-            post.setHeader("User-Agent", USER_AGENT);
 
-            // Start HTTP auth (app id + : + empty pw)
-            // Source: http://blog.leocad.io/basic-http-authentication-on-android/
-            String credentials = c.getString(R.string.reddit_app_id) + ":";
-
-            // Put the credentials into a base64 string.
-            String base64Credentials = Base64.encodeToString(credentials.getBytes(), Base64.NO_WRAP);
-            post.addHeader("Authorization", "Basic " + base64Credentials);
+            setupBasicAuthHeaders(post, c);
 
             HttpResponse response = client.execute(post);
 
@@ -215,6 +396,7 @@ public class RedditAPIHelper {
                 JSONObject object = new JSONObject(result);
                 token = object.getString("access_token");
                 refreshToken = object.getString("refresh_token");
+                expires = System.currentTimeMillis() + object.getLong("expires_in");
                 return true;
             }
         } catch (IOException | JSONException e) {
@@ -228,7 +410,7 @@ public class RedditAPIHelper {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
         StringBuilder builder = new StringBuilder();
 
-        String line = null;
+        String line;
         try {
             while ((line = reader.readLine()) != null) {
                 builder.append(line + "\n");
@@ -267,6 +449,57 @@ public class RedditAPIHelper {
     public boolean needsTokenRefresh() {
         // When the token is null and the refresh token isn't, we only need to "remind" the server
         return token == null && refreshToken != null;
+    }
+
+    /**
+     * Refreshes permission from the Reddit server.
+     *
+     * @param c The context in which the request was made.
+     * @return If the refresh was successful.
+     */
+    private boolean refreshPermissions(Context c) {
+        if (!refreshing) {
+            refreshing = true;
+            try {
+                HttpClient client = new DefaultHttpClient();
+
+                List<NameValuePair> params = new ArrayList<>(3);
+
+                // We put in the post params
+                params.add(new BasicNameValuePair("grant_type", "refresh_token"));
+                params.add(new BasicNameValuePair("refresh_token", refreshToken));
+
+                HttpPost post = new HttpPost("https://www.reddit.com/api/v1/access_token");
+                post.setEntity(new UrlEncodedFormEntity(params));
+
+                setupBasicAuthHeaders(post, c);
+
+                HttpResponse response = client.execute(post);
+
+                HttpEntity entity = response.getEntity();
+
+                if (entity != null) {
+                    InputStream stream = entity.getContent();
+                    String result = convertToString(stream);
+                    JSONObject object = new JSONObject(result);
+                    token = object.getString("access_token");
+                    expires = System.currentTimeMillis() + object.getLong("expires_in");
+                    return true;
+                }
+            } catch (IOException | JSONException e) {
+                e.printStackTrace();
+            }
+            refreshing = false;
+        }
+
+        return false;
+    }
+
+    private class RefreshTokensTask extends AsyncTask<Context, Void, Boolean> {
+        @Override
+        protected Boolean doInBackground(Context... context) {
+            return refreshPermissions(context[0]);
+        }
     }
 
     private class GetTokensTask extends AsyncTask<String, Void, Boolean> {

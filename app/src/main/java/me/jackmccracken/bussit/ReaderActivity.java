@@ -1,5 +1,6 @@
 package me.jackmccracken.bussit;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
@@ -7,7 +8,9 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ListView;
+import android.widget.Toast;
 
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -79,5 +82,27 @@ public class ReaderActivity extends ActionBarActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode == Activity.RESULT_OK) {
+            helper.getHot(this, new RedditAPIHelper.AfterCallTask<List<Post>>() {
+                @Override
+                public void run(List<Post> param) {
+
+                }
+
+                @Override
+                public void fail(String message) {
+                    Toast.makeText(ReaderActivity.this, "Error: " + message, Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+        else {
+            //TODO: What do we do here?? The user cancelled something pretty important...
+        }
     }
 }
