@@ -26,7 +26,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String POST_SUBREDDIT = "subreddit";
     private static final String POST_URL = "url";
     public static final String POSTS_CREATE = "CREATE TABLE " + TABLE_POSTS + "(" + POST_THINGID + " " +
-            "TEXT, " + POST_TITLE + " TEXT, " + POST_TITLE + " TEXT, " + POST_SUBREDDIT + "TEXT);";
+            "TEXT, " + POST_TITLE + " TEXT, " + POST_SUBREDDIT + " TEXT, " + POST_URL + " TEXT);";
 
     // Instance
     // Start the instance off as null.
@@ -97,6 +97,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public void putPost(Post p) {
         ContentValues cv = new ContentValues();
+
         cv.put(POST_TITLE, p.getTitle());
         cv.put(POST_SUBREDDIT, p.getSubreddit());
         cv.put(POST_URL, p.getURL());
@@ -105,8 +106,18 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.insert(TABLE_POSTS, null, cv);
     }
 
+    public void putPosts(List<Post> posts) {
+        for (Post p : posts) {
+            putPost(p);
+        }
+    }
+
+    public void clearPosts() {
+        db.execSQL("DELETE FROM " + TABLE_POSTS);
+    }
+
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        
+
     }
 }

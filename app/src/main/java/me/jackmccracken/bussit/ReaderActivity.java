@@ -12,17 +12,25 @@ import android.view.MenuItem;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import me.jackmccracken.bussit.adapters.PostAdapter;
+import me.jackmccracken.bussit.models.APIHelper;
+import me.jackmccracken.bussit.models.MockAPIHelper;
+import me.jackmccracken.bussit.models.MockPostManager;
+import me.jackmccracken.bussit.models.Post;
 import me.jackmccracken.bussit.models.PostManager;
 import me.jackmccracken.bussit.models.RedditPostManager;
 import me.jackmccracken.bussit.utils.AfterCallTask;
+import me.jackmccracken.bussit.utils.DatabaseHelper;
 import me.jackmccracken.bussit.utils.RedditAPIHelper;
 
 
 public class ReaderActivity extends ActionBarActivity implements SwipeRefreshLayout.OnRefreshListener {
     private ListView postsView;
     private PostManager postManager;
-    private RedditAPIHelper helper;
+    private APIHelper helper;
     private PostAdapter adapter;
     private SharedPreferences preferences;
     private SwipeRefreshLayout refreshView;
@@ -31,6 +39,10 @@ public class ReaderActivity extends ActionBarActivity implements SwipeRefreshLay
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_reader);
+
+        // Database setup
+        DatabaseHelper.makeInstance(this);
+
         postsView = (ListView)findViewById(R.id.main_posts);
 
         preferences = getPreferences(Context.MODE_PRIVATE);
@@ -122,6 +134,12 @@ public class ReaderActivity extends ActionBarActivity implements SwipeRefreshLay
         @Override
         public void run(Void param) {
             refreshView.setRefreshing(false);
+            // Next, we need to write the posts to the database.
+            DatabaseHelper helper = DatabaseHelper.getInstance();
+            // Clear the cache
+            helper.clearPosts();
+            // Put the posts in the database.
+            helper.putPosts(postManager.getPosts());
         }
 
         @Override

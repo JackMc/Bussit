@@ -37,12 +37,13 @@ import java.util.Queue;
 import java.util.Random;
 
 import me.jackmccracken.bussit.R;
+import me.jackmccracken.bussit.models.APIHelper;
 import me.jackmccracken.bussit.models.Post;
 
 /**
  * Created by jack on 05/02/15.
  */
-public class RedditAPIHelper {
+public class RedditAPIHelper implements APIHelper {
     /*
      * References for most of the following:
      * - https://github.com/reddit/reddit/wiki/OAuth2
@@ -156,6 +157,7 @@ public class RedditAPIHelper {
      * This method should generally only be called on first run.
      * @param web The WebView to interact with.
      */
+    @Override
     public void getFullPermission(final WebView web) {
         WebViewClient client = new WebViewClient() {
             @Override
@@ -305,6 +307,7 @@ public class RedditAPIHelper {
      * @param c The context in which the request was made.
      * @param after Will be executed after
      */
+    @Override
     public void getHot(final Context c, final AfterCallTask<List<Post>> after) {
         AsyncTask<Void, Void, List<Post>> getHotTask = new AsyncTask<Void, Void, List<Post>>() {
             /**
@@ -457,6 +460,7 @@ public class RedditAPIHelper {
      * @return True if we need to pull up a WebView to allow for the user to authenticate and tell
      *         the server that they want to use our app.
      */
+    @Override
     public boolean needsFullPermission() {
         // When the refresh token is null, we need to ask for full permission.
         return refreshToken == null;
@@ -468,6 +472,7 @@ public class RedditAPIHelper {
      *
      * @return True if Reddit needs a reminder that we exist.
      */
+    @Override
     public boolean needsTokenRefresh() {
         // When the token is null and the refresh token isn't, we only need to "remind" the server
 
@@ -533,6 +538,7 @@ public class RedditAPIHelper {
      *
      * @param context The context in which the request was made.
      */
+    @Override
     public void refreshTokens(Context context, AfterCallTask<Void> after) {
         new RefreshTokensTask(after).execute(context);
     }

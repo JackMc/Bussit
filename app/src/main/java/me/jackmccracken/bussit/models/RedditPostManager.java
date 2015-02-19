@@ -7,6 +7,7 @@ import java.util.List;
 
 import me.jackmccracken.bussit.ReaderActivity;
 import me.jackmccracken.bussit.utils.AfterCallTask;
+import me.jackmccracken.bussit.utils.DatabaseHelper;
 import me.jackmccracken.bussit.utils.RedditAPIHelper;
 
 /**
@@ -14,10 +15,10 @@ import me.jackmccracken.bussit.utils.RedditAPIHelper;
  */
 public class RedditPostManager implements PostManager {
     private List<Post> posts = new ArrayList<>();
-    private RedditAPIHelper helper;
+    private APIHelper helper;
     private ReaderActivity context;
 
-    public RedditPostManager(ReaderActivity context, RedditAPIHelper helper) {
+    public RedditPostManager(ReaderActivity context, APIHelper helper) {
         this.helper = helper;
         this.context = context;
     }
@@ -42,6 +43,7 @@ public class RedditPostManager implements PostManager {
                 posts.clear();
                 posts.addAll(param);
                 context.invalidate();
+
 
                 if (after != null) {
                     after.run(null);

@@ -81,7 +81,7 @@ public class Post implements Parcelable {
     }
 
     public String getSubreddit() {
-        return url;
+        return subreddit;
     }
 
     public String getThingId() {

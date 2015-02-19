@@ -27,6 +27,7 @@ public class MockPostManager implements PostManager {
 
     @Override
     public void update(AfterCallTask<Void> after) {
-
+        // Tell it we're done!
+        after.run(null);
     }
 }
