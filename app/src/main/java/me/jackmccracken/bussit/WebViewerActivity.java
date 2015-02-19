@@ -4,16 +4,27 @@ import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.webkit.WebView;
+
+import me.jackmccracken.bussit.models.Post;
 
 
 public class WebViewerActivity extends ActionBarActivity {
+    private WebView web;
+    private Post post;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_web_viewer);
-    }
 
+        web = (WebView)findViewById(R.id.reader_web);
+
+        post = getIntent().getParcelableExtra("post");
+
+        // Go to the link stored in the post
+        web.loadUrl(post.getURL());
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

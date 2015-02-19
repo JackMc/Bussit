@@ -1,11 +1,14 @@
 package me.jackmccracken.bussit.adapters;
 
 import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 
 import me.jackmccracken.bussit.R;
+import me.jackmccracken.bussit.WebViewerActivity;
 import me.jackmccracken.bussit.models.Post;
 import me.jackmccracken.bussit.models.PostManager;
 
@@ -17,7 +20,7 @@ public class PostAdapter extends ArrayAdapter<Post> {
         this.postManager = postManager;
     }
 
-    public View getView(int position, View convertView, ViewGroup parent) {
+    public View getView(final int position, View convertView, ViewGroup parent) {
         View row = convertView;
         Post post = postManager.getPost(position);
 
@@ -32,6 +35,20 @@ public class PostAdapter extends ArrayAdapter<Post> {
 
         // Set up the tag so the click handler knows what to do.
         row.setTag(post);
+
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent();
+
+                Context context = getContext();
+
+                intent.putExtra("post", postManager.getPost(position));
+                intent.setClass(context, WebViewerActivity.class);
+
+                context.startActivity(intent);
+            }
+        });
 
         return row;
     }
