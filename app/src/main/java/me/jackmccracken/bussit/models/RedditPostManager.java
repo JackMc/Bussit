@@ -1,8 +1,13 @@
 package me.jackmccracken.bussit.models;
 
+import android.content.Context;
+import android.widget.Toast;
+
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 
+import me.jackmccracken.bussit.ReaderActivity;
 import me.jackmccracken.bussit.utils.RedditAPIHelper;
 
 /**
@@ -11,9 +16,11 @@ import me.jackmccracken.bussit.utils.RedditAPIHelper;
 public class RedditPostManager implements PostManager {
     private List<Post> posts = new ArrayList<>();
     private RedditAPIHelper helper;
+    private ReaderActivity context;
 
-    public RedditPostManager(RedditAPIHelper helper) {
+    public RedditPostManager(ReaderActivity context, RedditAPIHelper helper) {
         this.helper = helper;
+        this.context = context;
     }
 
     @Override
@@ -28,6 +35,20 @@ public class RedditPostManager implements PostManager {
 
     @Override
     public void update() {
-        // Read from Reddit.
+        helper.getHot(context, new RedditAPIHelper.AfterCallTask<List<Post>>() {
+            @Override
+            public void run(List<Post> param) {
+                // HACK: We do some acrobatics here to keep the reference in the adapter the same
+                // This is because then we can just invalidate the adapter
+                posts.clear();
+                posts.addAll(param);
+                context.invalidate();
+            }
+
+            @Override
+            public void fail(String message) {
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 }

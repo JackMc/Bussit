@@ -14,8 +14,9 @@ import me.jackmccracken.bussit.R;
 public class Post {
     private String title;
     private String subreddit;
+    private String url;
 
-    public Post(String title, String subreddit) {
+    public Post(String title, String subreddit, String url) {
         this.title = title;
         this.subreddit = subreddit;
     }

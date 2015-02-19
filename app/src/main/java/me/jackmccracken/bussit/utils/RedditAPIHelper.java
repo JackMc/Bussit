@@ -22,6 +22,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -295,6 +296,31 @@ public class RedditAPIHelper {
         public void fail(String message);
     }
 
+    private List<Post> jsonToPosts(JSONObject object) {
+        List<Post> posts;
+
+        try {
+            JSONObject data = object.getJSONObject("data");
+            JSONArray pageChildren = data.getJSONArray("children");
+
+            // We give the arraylist the length we're gonna have.
+            posts = new ArrayList<>(pageChildren.length());
+
+            for (int i = 0; i < pageChildren.length(); i++) {
+                JSONObject postData = pageChildren.getJSONObject(i).getJSONObject("data");
+                System.out.println(postData.toString());
+                posts.add(new Post(postData.getString("title"),
+                                   "/r/" + postData.getString("subreddit"),
+                                   postData.getString("url")));
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        return posts;
+    }
+
     /**
      *
      * @param c The context in which the request was made.
@@ -314,8 +340,6 @@ public class RedditAPIHelper {
 
                     HttpGet get = new HttpGet(getAPIEndpoint("hot"));
 
-                    List<Post> posts = new ArrayList<>();
-
                     setupUserAgent(get);
                     setupTokenAuthHeaders(get);
                     HttpResponse response = client.execute(get);
@@ -332,9 +356,15 @@ public class RedditAPIHelper {
                     if (entity != null) {
                         JSONObject object = new JSONObject(convertToString(entity.getContent()));
 
-                         String responseText = object.toString();
+                        List<Post> posts = jsonToPosts(object);
 
-                        BasicUtils.logLong(Log.ERROR, "Result", responseText);
+                        if (posts != null) {
+                            return posts;
+                        }
+                        else {
+                            message = "Could not get posts from Reddit server.";
+                            return null;
+                        }
                     }
                 } catch (IOException | JSONException e) {
                     //TODO: Nicer error messages.

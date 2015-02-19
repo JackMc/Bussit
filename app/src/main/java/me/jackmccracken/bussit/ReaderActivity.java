@@ -7,6 +7,7 @@ import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -18,6 +19,7 @@ import me.jackmccracken.bussit.adapters.PostAdapter;
 import me.jackmccracken.bussit.models.MockPostManager;
 import me.jackmccracken.bussit.models.Post;
 import me.jackmccracken.bussit.models.PostManager;
+import me.jackmccracken.bussit.models.RedditPostManager;
 import me.jackmccracken.bussit.utils.RedditAPIHelper;
 
 
@@ -25,6 +27,7 @@ public class ReaderActivity extends ActionBarActivity {
     ListView postsView;
     PostManager postManager;
     RedditAPIHelper helper;
+    PostAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,24 +35,13 @@ public class ReaderActivity extends ActionBarActivity {
         setContentView(R.layout.activity_reader);
         postsView = (ListView)findViewById(R.id.main_posts);
 
-        List<Post> posts = new ArrayList<>();
-
-        posts.add(new Post("Cat video!", "/r/aww"));
-        posts.add(new Post("An Excellent Test!", "/r/magic"));
-        posts.add(new Post("An Excellent Test!", "/r/magic1"));
-        posts.add(new Post("An Excellent Test!", "/r/magic2"));
-        posts.add(new Post("An Excellent Test!", "/r/magic3"));
-        posts.add(new Post("An Excellent Test!", "/r/magic4"));
-        posts.add(new Post("An Excellent Test!", "/r/magic5"));
-        posts.add(new Post("An Excellent Test!", "/r/magic6"));
-        posts.add(new Post("An Excellent Test!", "/r/magic7"));
-
-        postManager = new MockPostManager(posts);
-
         //TODO: Keep the refresh token in a database.
         helper = new RedditAPIHelper(null);
+        postManager = new RedditPostManager(this, helper);
 
-        postsView.setAdapter(new PostAdapter(this, postManager));
+        adapter = new PostAdapter(this, postManager);
+
+        postsView.setAdapter(adapter);
 
         // If we need to get full authentication (ask the API helper),
         // then bring up a RedditLoginActivity
@@ -89,20 +81,14 @@ public class ReaderActivity extends ActionBarActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (resultCode == Activity.RESULT_OK) {
-            helper.getHot(this, new RedditAPIHelper.AfterCallTask<List<Post>>() {
-                @Override
-                public void run(List<Post> param) {
-
-                }
-
-                @Override
-                public void fail(String message) {
-                    Toast.makeText(ReaderActivity.this, "Error: " + message, Toast.LENGTH_LONG).show();
-                }
-            });
+            postManager.update();
         }
         else {
             //TODO: What do we do here?? The user cancelled something pretty important...
         }
+    }
+
+    public void invalidate() {
+        adapter.notifyDataSetInvalidated();
     }
 }
