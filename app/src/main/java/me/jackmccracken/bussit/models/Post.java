@@ -19,6 +19,7 @@ public class Post {
     public Post(String title, String subreddit, String url) {
         this.title = title;
         this.subreddit = subreddit;
+        this.url = url;
     }
 
     public View genView(ViewGroup parent, Context context) {

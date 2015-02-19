@@ -2,11 +2,6 @@ package me.jackmccracken.bussit.utils;
 
 import android.util.Log;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.StringReader;
-
 /**
  * Created by jack on 12/02/15.
  */

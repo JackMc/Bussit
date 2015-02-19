@@ -2,6 +2,8 @@ package me.jackmccracken.bussit.models;
 
 import java.util.List;
 
+import me.jackmccracken.bussit.utils.AfterCallTask;
+
 /**
  * Models a provider of posts
  */
@@ -24,6 +26,8 @@ public interface PostManager {
 
     /**
      * Update the list of posts.
+     * @param after This will be called after the update has been completed,
+     *              either with a success or a fail.
      */
-    public void update();
+    public void update(AfterCallTask<Void> after);
 }

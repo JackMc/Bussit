@@ -2,11 +2,11 @@ package me.jackmccracken.bussit.utils;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.util.Base64;
-import android.util.Log;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
@@ -64,6 +64,7 @@ public class RedditAPIHelper {
 
     private static final String API_DOMAIN = "oauth.reddit.com";
     private static final String API_PROTOCOL = "https";
+    private final SharedPreferences preferences;
 
     /**
      * A token given to us by the Reddit servers. Used for when we need to refresh our authorization
@@ -90,16 +91,17 @@ public class RedditAPIHelper {
      */
     private boolean refreshing = false;
 
-
-    private String stateString;
-
     /**
      * Initializes a Reddit API helper.
-     * @param refreshToken The token given to us by the server for when we need to refresh our token
-     *                     (every hour). If this is null, we assume we will need an auth request.
+     * @param preferences The shared preferences from which any tokens that were written will
+     *                    be extracted.
      */
-    public RedditAPIHelper(String refreshToken) {
-        this.refreshToken = refreshToken;
+    public RedditAPIHelper(SharedPreferences preferences) {
+        this.preferences = preferences;
+        this.refreshToken = preferences.getString("refresh_token", null);
+        this.token = preferences.getString("token", null);
+        this.expires = preferences.getLong("expires", 0);
+
         ops = new LinkedList<>();
         setInstance(this);
     }
@@ -131,9 +133,7 @@ public class RedditAPIHelper {
             builder.append(random.nextInt(10));
         }
 
-        this.stateString = builder.toString();
-
-        return stateString;
+        return builder.toString();
     }
 
     /**
@@ -214,7 +214,7 @@ public class RedditAPIHelper {
      */
     private void checkNeedRefresh(Context c) {
         // expires is the time when our token will become invalid
-        if (this.expires < System.currentTimeMillis()) {
+        if (needsTokenRefresh()) {
             refreshPermissions(c);
         }
 
@@ -262,8 +262,8 @@ public class RedditAPIHelper {
     }
 
     private String getAPIEndpoint(String endpoint, NameValuePair...params) {
-        Uri.Builder builder = new Uri.Builder().scheme("https")
-                                .authority("oauth.reddit.com")
+        Uri.Builder builder = new Uri.Builder().scheme(API_PROTOCOL)
+                                .authority(API_DOMAIN)
                                 .path(endpoint);
         for (NameValuePair p : params) {
             builder.appendQueryParameter(p.getName(), p.getValue());
@@ -274,26 +274,6 @@ public class RedditAPIHelper {
 
     private void enqueueTask(AsyncTask<Void, Void, ?> task) {
         ops.add(task);
-    }
-
-    /**
-     * Defines a task which will be executed <b>on the main thread</b> after the execution of a
-     * Reddit API call.
-     * @param <T> The data to be returned from the server.
-     */
-    public interface AfterCallTask<T> {
-        /**
-         * Called after a success.
-         * @param param A function-defined parameter.
-         */
-        public void run(T param);
-
-        /**
-         * Called if the operation fails.
-         *
-         * @param message A user-readable message to be displayed if it is appropriate.
-         */
-        public void fail(String message);
     }
 
     private List<Post> jsonToPosts(JSONObject object) {
@@ -308,7 +288,6 @@ public class RedditAPIHelper {
 
             for (int i = 0; i < pageChildren.length(); i++) {
                 JSONObject postData = pageChildren.getJSONObject(i).getJSONObject("data");
-                System.out.println(postData.toString());
                 posts.add(new Post(postData.getString("title"),
                                    "/r/" + postData.getString("subreddit"),
                                    postData.getString("url")));
@@ -398,6 +377,7 @@ public class RedditAPIHelper {
 
     /**
      * Retrieves the tokens from the Reddit server using the code given.
+     *
      * @param code The code from the auth page.
      */
     private boolean getFirstToken(String code, Context c) {
@@ -424,9 +404,21 @@ public class RedditAPIHelper {
                 InputStream stream = entity.getContent();
                 String result = convertToString(stream);
                 JSONObject object = new JSONObject(result);
+
                 token = object.getString("access_token");
                 refreshToken = object.getString("refresh_token");
                 expires = System.currentTimeMillis() + object.getLong("expires_in");
+
+                SharedPreferences.Editor editor = preferences.edit();
+
+                // Apply the tokens we got from Reddit.
+                editor.putLong("expires", expires);
+                editor.putString("refresh_token", refreshToken);
+                editor.putString("token", token);
+
+                // Put the changes into the file.
+                editor.apply();
+
                 return true;
             }
         } catch (IOException | JSONException e) {
@@ -443,7 +435,7 @@ public class RedditAPIHelper {
         String line;
         try {
             while ((line = reader.readLine()) != null) {
-                builder.append(line + "\n");
+                builder.append(line).append("\n");
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -478,7 +470,17 @@ public class RedditAPIHelper {
      */
     public boolean needsTokenRefresh() {
         // When the token is null and the refresh token isn't, we only need to "remind" the server
-        return token == null && refreshToken != null;
+
+        // Expires = 0 when we have not set an expiry time (this shouldn't happen, but it's safer
+        // if we ask for a refresh)
+        return expires == 0 ||
+                // token == null means that we do not have a token from the server.
+                // refreshToken != null means that there exists a token which we can use to refresh.
+                (token == null && refreshToken != null) ||
+                // token != null means we have a token
+                // refreshToken != null means that we have a refresh token.
+                // The third conditional means that our current token has expired.
+                (token != null && refreshToken != null && System.currentTimeMillis() > expires);
     }
 
     /**
@@ -525,10 +527,36 @@ public class RedditAPIHelper {
         return false;
     }
 
+    /**
+     * Refresh the tokens.
+     *
+     * @param context The context in which the request was made.
+     */
+    public void refreshTokens(Context context, AfterCallTask<Void> after) {
+        new RefreshTokensTask(after).execute(context);
+    }
+
     private class RefreshTokensTask extends AsyncTask<Context, Void, Boolean> {
+        private AfterCallTask<Void> after;
+
+        public RefreshTokensTask(AfterCallTask<Void> after) {
+            this.after = after;
+        }
+
         @Override
         protected Boolean doInBackground(Context... context) {
             return refreshPermissions(context[0]);
+        }
+
+        @Override
+        protected void onPostExecute(Boolean aBoolean) {
+            super.onPostExecute(aBoolean);
+            if (aBoolean) {
+                after.run(null);
+            }
+            else {
+                after.fail("");
+            }
         }
     }
 

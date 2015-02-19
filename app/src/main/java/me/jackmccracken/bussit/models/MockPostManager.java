@@ -2,6 +2,8 @@ package me.jackmccracken.bussit.models;
 
 import java.util.List;
 
+import me.jackmccracken.bussit.utils.AfterCallTask;
+
 /**
  * Lets you provide a list of Post objects to provide to the PostAdapter.
  */
@@ -24,7 +26,7 @@ public class MockPostManager implements PostManager {
     }
 
     @Override
-    public void update() {
+    public void update(AfterCallTask<Void> after) {
 
     }
 }

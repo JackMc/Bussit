@@ -1,27 +1,23 @@
 package me.jackmccracken.bussit;
 
-import android.graphics.Bitmap;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
 
 import me.jackmccracken.bussit.utils.RedditAPIHelper;
 
 
 public class RedditLoginActivity extends ActionBarActivity {
     public static int FULL_LOGIN = 0;
-    private WebView login;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_reddit_login);
 
-        this.login = (WebView)findViewById(R.id.login_webview);
+        WebView login = (WebView) findViewById(R.id.login_webview);
 
         RedditAPIHelper.getInstance().getFullPermission(login);
     }

@@ -1,13 +1,12 @@
 package me.jackmccracken.bussit.models;
 
-import android.content.Context;
 import android.widget.Toast;
 
-import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 
 import me.jackmccracken.bussit.ReaderActivity;
+import me.jackmccracken.bussit.utils.AfterCallTask;
 import me.jackmccracken.bussit.utils.RedditAPIHelper;
 
 /**
@@ -34,8 +33,8 @@ public class RedditPostManager implements PostManager {
     }
 
     @Override
-    public void update() {
-        helper.getHot(context, new RedditAPIHelper.AfterCallTask<List<Post>>() {
+    public void update(final AfterCallTask<Void> after) {
+        helper.getHot(context, new AfterCallTask<List<Post>>() {
             @Override
             public void run(List<Post> param) {
                 // HACK: We do some acrobatics here to keep the reference in the adapter the same
@@ -43,11 +42,19 @@ public class RedditPostManager implements PostManager {
                 posts.clear();
                 posts.addAll(param);
                 context.invalidate();
+
+                if (after != null) {
+                    after.run(null);
+                }
             }
 
             @Override
             public void fail(String message) {
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+
+                if (after != null) {
+                    after.fail("Refresh failed: " + message);
+                }
             }
         });
     }
