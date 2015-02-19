@@ -1,5 +1,6 @@
 package me.jackmccracken.bussit.adapters;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -46,7 +47,7 @@ public class PostAdapter extends ArrayAdapter<Post> {
                 intent.putExtra("post", postManager.getPost(position));
                 intent.setClass(context, WebViewerActivity.class);
 
-                context.startActivity(intent);
+                ((Activity)context).startActivityForResult(intent, WebViewerActivity.READ_POST);
             }
         });
 

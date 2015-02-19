@@ -1,5 +1,7 @@
 package me.jackmccracken.bussit;
 
+import android.app.Activity;
+import android.support.v4.app.NavUtils;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -12,6 +14,7 @@ import me.jackmccracken.bussit.models.Post;
 public class WebViewerActivity extends ActionBarActivity {
     private WebView web;
     private Post post;
+    public static final int READ_POST = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,6 +27,10 @@ public class WebViewerActivity extends ActionBarActivity {
 
         // Go to the link stored in the post
         web.loadUrl(post.getURL());
+
+        // Display the back button.
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setTitle(post.getTitle());
     }
 
     @Override
@@ -43,6 +50,10 @@ public class WebViewerActivity extends ActionBarActivity {
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             return true;
+        }
+        else if (id == android.R.id.home) {
+            setResult(Activity.RESULT_OK);
+            finish();
         }
 
         return super.onOptionsItemSelected(item);

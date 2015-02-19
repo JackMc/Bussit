@@ -30,15 +30,18 @@ public class Post implements Parcelable {
     private String title;
     private String subreddit;
     private String url;
+    private String thingId;
 
-    public Post(String title, String subreddit, String url) {
+    public Post(String title, String subreddit, String url, String thingId) {
         this.title = title;
         this.subreddit = subreddit;
         this.url = url;
+        this.thingId = thingId;
     }
 
     public Post(Parcel in) {
-        this(in.readString(), in.readString(), in.readString());
+        this(in.readString(), in.readString(), in.readString(),
+                in.readString());
     }
 
     public View genView(ViewGroup parent, Context context) {
@@ -66,6 +69,7 @@ public class Post implements Parcelable {
         dest.writeString(title);
         dest.writeString(subreddit);
         dest.writeString(url);
+        dest.writeString(thingId);
     }
 
     public String getURL() {
@@ -78,5 +82,9 @@ public class Post implements Parcelable {
 
     public String getSubreddit() {
         return url;
+    }
+
+    public String getThingId() {
+        return thingId;
     }
 }

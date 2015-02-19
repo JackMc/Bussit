@@ -95,12 +95,12 @@ public class ReaderActivity extends ActionBarActivity implements SwipeRefreshLay
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
-        if (resultCode == Activity.RESULT_OK) {
-            doUpdate();
-        }
-        else {
-            //TODO: What do we do here?? The user cancelled something pretty important...
+        if (requestCode == RedditLoginActivity.FULL_LOGIN) {
+            if (resultCode == Activity.RESULT_OK) {
+                doUpdate();
+            } else {
+                //TODO: What do we do here?? The user cancelled something pretty important...
+            }
         }
     }
 

@@ -289,7 +289,8 @@ public class RedditAPIHelper {
                 JSONObject postData = pageChildren.getJSONObject(i).getJSONObject("data");
                 posts.add(new Post(postData.getString("title"),
                                    "/r/" + postData.getString("subreddit"),
-                                   postData.getString("url")));
+                                   postData.getString("url"),
+                                   postData.getString("id")));
             }
         } catch (JSONException e) {
             e.printStackTrace();
