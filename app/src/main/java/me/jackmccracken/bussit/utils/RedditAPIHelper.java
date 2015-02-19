@@ -170,7 +170,6 @@ public class RedditAPIHelper {
                         pointWeb(web);
                     }
                     else if (url.contains("code")) {
-                        //TODO: Do this in another thread
                         new GetTokensTask(web).execute(url.substring(url.indexOf(REDDIT_CODE_INDICATOR)
                                 + REDDIT_CODE_INDICATOR.length()));
                     }
@@ -215,7 +214,7 @@ public class RedditAPIHelper {
     private void checkNeedRefresh(Context c) {
         // expires is the time when our token will become invalid
         if (needsTokenRefresh()) {
-            refreshPermissions(c);
+            new RefreshTokensTask(null).execute(c);
         }
 
         checkAndExecuteQueue();
@@ -520,8 +519,9 @@ public class RedditAPIHelper {
                 }
             } catch (IOException | JSONException e) {
                 e.printStackTrace();
+            } finally {
+                refreshing = false;
             }
-            refreshing = false;
         }
 
         return false;
@@ -552,10 +552,14 @@ public class RedditAPIHelper {
         protected void onPostExecute(Boolean aBoolean) {
             super.onPostExecute(aBoolean);
             if (aBoolean) {
-                after.run(null);
+                if (after != null) {
+                    after.run(null);
+                }
             }
             else {
-                after.fail("");
+                if (after != null) {
+                    after.fail("Cannot refresh token.");
+                }
             }
         }
     }

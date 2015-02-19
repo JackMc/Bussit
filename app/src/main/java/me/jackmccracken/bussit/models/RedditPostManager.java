@@ -38,7 +38,7 @@ public class RedditPostManager implements PostManager {
             @Override
             public void run(List<Post> param) {
                 // HACK: We do some acrobatics here to keep the reference in the adapter the same
-                // This is because then we can just invalidate the adapter
+                // This is because then we can just invalidate the adapter to make the posts appear.
                 posts.clear();
                 posts.addAll(param);
                 context.invalidate();
