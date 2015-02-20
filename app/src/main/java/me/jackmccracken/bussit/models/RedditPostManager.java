@@ -52,8 +52,6 @@ public class RedditPostManager implements PostManager {
 
             @Override
             public void fail(String message) {
-                Toast.makeText(context, message, Toast.LENGTH_LONG).show();
-
                 if (after != null) {
                     after.fail("Refresh failed: " + message);
                 }
