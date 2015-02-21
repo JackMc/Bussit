@@ -18,16 +18,18 @@ public interface PostManager {
 
     /**
      * Returns a List in the order which getPost gives them. THis list
-     * will be impacted by any calls to update() and should not be modified.
+     * will be impacted by any calls to networkUpdate() and should not be modified.
      *
      * @return The list described above.
      */
     public List<Post> getPosts();
 
     /**
-     * Update the list of posts.
-     * @param after This will be called after the update has been completed,
+     * Update the list of posts from the network.
+     * @param after This will be called after the networkUpdate has been completed,
      *              either with a success or a fail.
      */
-    public void update(AfterCallTask<Void> after);
+    public void networkUpdate(AfterCallTask<Void> after);
+
+    public void cachedUpdate(AfterCallTask<Void> after);
 }

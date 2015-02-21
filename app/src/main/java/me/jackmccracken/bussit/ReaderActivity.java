@@ -4,36 +4,34 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import me.jackmccracken.bussit.adapters.PostAdapter;
 import me.jackmccracken.bussit.models.APIHelper;
-import me.jackmccracken.bussit.models.MockAPIHelper;
-import me.jackmccracken.bussit.models.MockPostManager;
-import me.jackmccracken.bussit.models.Post;
 import me.jackmccracken.bussit.models.PostManager;
 import me.jackmccracken.bussit.models.RedditPostManager;
 import me.jackmccracken.bussit.utils.AfterCallTask;
 import me.jackmccracken.bussit.utils.DatabaseHelper;
 import me.jackmccracken.bussit.utils.RedditAPIHelper;
 
-
-public class ReaderActivity extends ActionBarActivity implements SwipeRefreshLayout.OnRefreshListener {
+public class ReaderActivity extends ActionBarActivity
+        implements SwipeRefreshLayout.OnRefreshListener {
     private ListView postsView;
     private PostManager postManager;
     private APIHelper helper;
     private PostAdapter adapter;
     private SharedPreferences preferences;
     private SwipeRefreshLayout refreshView;
+    private ConnectivityManager connectivityManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,13 +58,19 @@ public class ReaderActivity extends ActionBarActivity implements SwipeRefreshLay
 
         // If we need to get full authentication (ask the API helper),
         // then bring up a RedditLoginActivity
-        if (helper.needsFullPermission()) {
+        connectivityManager = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        if (helper.needsFullPermission() && isWifiConnected()) {
+            Log.d("StartState", "Obtaining token.");
             Intent openLogin = new Intent();
             openLogin.setClass(this, RedditLoginActivity.class);
 
             startActivityForResult(openLogin, RedditLoginActivity.FULL_LOGIN);
-        }
-        else if (helper.needsTokenRefresh()) {
+        } else if (helper.needsFullPermission() && !isWifiConnected()) {
+            Toast.makeText(this, "Warning: You must start this app with WiFi connected the first time you launch it.",
+                    Toast.LENGTH_LONG).show();
+        } else if (helper.needsTokenRefresh() && isWifiConnected()) {
+            Log.d("StartState", "Obtaining refreshed token.");
             helper.refreshTokens(this, new AfterCallTask<Void>() {
                 @Override
                 public void run(Void param) {
@@ -80,6 +84,15 @@ public class ReaderActivity extends ActionBarActivity implements SwipeRefreshLay
                 }
             });
         }
+        else {
+            Log.d("StartState", "Cached read.");
+            postManager.cachedUpdate(null);
+        }
+    }
+
+    private boolean isWifiConnected() {
+        return connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI).getState()
+                == NetworkInfo.State.CONNECTED;
     }
 
     @Override
@@ -109,6 +122,8 @@ public class ReaderActivity extends ActionBarActivity implements SwipeRefreshLay
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == RedditLoginActivity.FULL_LOGIN) {
             if (resultCode == Activity.RESULT_OK) {
+                // This makes sense to do because the user just came back from a successful login
+                // i.e. they were connected to the Internet.
                 doUpdate();
             } else {
                 //TODO: What do we do here?? The user cancelled something pretty important...
@@ -127,7 +142,7 @@ public class ReaderActivity extends ActionBarActivity implements SwipeRefreshLay
 
     private void doUpdate() {
         refreshView.setRefreshing(true);
-        postManager.update(new FinishRefreshTask());
+        postManager.networkUpdate(new FinishRefreshTask());
     }
 
     private class FinishRefreshTask implements AfterCallTask<Void> {

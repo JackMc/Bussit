@@ -83,6 +83,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         List<Post> posts = new ArrayList<>();
 
+        cursor.moveToNext();
+
         while (!cursor.isAfterLast()) {
             posts.add(new Post(
                     cursor.getString(cursor.getColumnIndex(POST_TITLE)),
@@ -90,6 +92,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     cursor.getString(cursor.getColumnIndex(POST_URL)),
                     cursor.getString(cursor.getColumnIndex(POST_THINGID))
                     ));
+            cursor.moveToNext();
         }
 
         return posts;

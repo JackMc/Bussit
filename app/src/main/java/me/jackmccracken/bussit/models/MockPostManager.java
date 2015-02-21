@@ -26,8 +26,14 @@ public class MockPostManager implements PostManager {
     }
 
     @Override
-    public void update(AfterCallTask<Void> after) {
+    public void networkUpdate(AfterCallTask<Void> after) {
         // Tell it we're done!
         after.run(null);
+    }
+
+    @Override
+    public void cachedUpdate(AfterCallTask<Void> after) {
+        // Mock it in the same way as a network update.
+        networkUpdate(after);
     }
 }

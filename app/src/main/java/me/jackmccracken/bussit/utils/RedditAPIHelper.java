@@ -412,15 +412,7 @@ public class RedditAPIHelper implements APIHelper {
                 refreshToken = object.getString("refresh_token");
                 expires = System.currentTimeMillis() + object.getLong("expires_in");
 
-                SharedPreferences.Editor editor = preferences.edit();
-
-                // Apply the tokens we got from Reddit.
-                editor.putLong("expires", expires);
-                editor.putString("refresh_token", refreshToken);
-                editor.putString("token", token);
-
-                // Put the changes into the file.
-                editor.apply();
+                putTokens();
 
                 return true;
             }
@@ -429,6 +421,18 @@ public class RedditAPIHelper implements APIHelper {
         }
 
         return false;
+    }
+
+    private void putTokens() {
+        SharedPreferences.Editor editor = preferences.edit();
+
+        // Apply the tokens we got from Reddit.
+        editor.putLong("expires", expires);
+        editor.putString("refresh_token", refreshToken);
+        editor.putString("token", token);
+
+        // Put the changes into the file.
+        editor.apply();
     }
 
     private String convertToString(InputStream stream) {
@@ -516,11 +520,15 @@ public class RedditAPIHelper implements APIHelper {
                 HttpEntity entity = response.getEntity();
 
                 if (entity != null) {
+                    // Err on the side of caution.
+                    long beforeRequestTime = System.currentTimeMillis();
                     InputStream stream = entity.getContent();
                     String result = convertToString(stream);
                     JSONObject object = new JSONObject(result);
                     token = object.getString("access_token");
-                    expires = System.currentTimeMillis() + object.getLong("expires_in");
+                    // (*1000) because we need to convert to milliseconds.
+                    expires = beforeRequestTime + (object.getLong("expires_in")*1000);
+                    putTokens();
                     return true;
                 }
             } catch (IOException | JSONException e) {

@@ -1,5 +1,6 @@
 package me.jackmccracken.bussit.models;
 
+import android.os.AsyncTask;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -34,15 +35,11 @@ public class RedditPostManager implements PostManager {
     }
 
     @Override
-    public void update(final AfterCallTask<Void> after) {
+    public void networkUpdate(final AfterCallTask<Void> after) {
         helper.getHot(context, new AfterCallTask<List<Post>>() {
             @Override
             public void run(List<Post> param) {
-                // HACK: We do some acrobatics here to keep the reference in the adapter the same
-                // This is because then we can just invalidate the adapter to make the posts appear.
-                posts.clear();
-                posts.addAll(param);
-                context.invalidate();
+                sourcePosts(param);
 
 
                 if (after != null) {
@@ -57,5 +54,48 @@ public class RedditPostManager implements PostManager {
                 }
             }
         });
+    }
+
+    /**
+     * An internal method which makes sure that the elements of {@param newPosts} are inserted into
+     * and the only remaining elements of the internal list of Post objects. This will also indicate
+     * to the calling context that this it is necessary to reload all of the list items in the main
+     * post list.
+     *
+     * @param newPosts The new posts to display.
+     */
+    private void sourcePosts(List<Post> newPosts) {
+        // HACK: We do some acrobatics here to keep the reference in the adapter the same
+        // This is because then we can just invalidate the adapter to make the newPosts appear.
+        this.posts.clear();
+        this.posts.addAll(newPosts);
+        context.invalidate();
+    }
+
+    @Override
+    public void cachedUpdate(final AfterCallTask<Void> after) {
+        new AsyncTask<Void, Void, List<Post>>() {
+            @Override
+            protected List<Post> doInBackground(Void... params) {
+                return DatabaseHelper.getInstance().getPosts();
+            }
+
+            @Override
+            protected void onPostExecute(List<Post> result) {
+                super.onPostExecute(result);
+
+                if (result != null) {
+                    sourcePosts(result);
+                    if (after != null) {
+                        after.run(null);
+                    }
+                }
+                else {
+                    if (after != null) {
+                        after.fail("Unable to fetch posts from database.");
+                    }
+                }
+            }
+        }.execute();
     }
 }
