@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- This is a wrapper around Gradle -->
+<project name="Bussit" default="dist" basedir=".">
+  <property name="gradle.executable" value="./gradlew"/>
+  <property name="app.package" value="me.jackmccracken.bussit"/>
+  <property name="app.main" value="ReaderActivity"/>
+
+  <target name="dist">
+    <exec executable="${gradle.executable}">
+      <arg value="installDebug"/>
+    </exec>
+    <exec executable="adb">
+      <arg value="shell"/>
+      <arg value="am start -n '${app.package}/${app.package}.${app.main}' -a android.intent.action.MAIN -c android.intent.category.LAUNCHER"/>
+    </exec>
+  </target>
+</project>
