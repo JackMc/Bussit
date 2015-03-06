@@ -150,11 +150,13 @@ public class ReaderActivity extends ActionBarActivity
         public void run(Void param) {
             refreshView.setRefreshing(false);
             // Next, we need to write the posts to the database.
-            DatabaseHelper helper = DatabaseHelper.getInstance();
+            DatabaseHelper dbHelper = DatabaseHelper.getInstance();
             // Clear the cache
-            helper.clearPosts();
+            dbHelper.clearPosts();
             // Put the posts in the database.
-            helper.putPosts(postManager.getPosts());
+            dbHelper.putPosts(postManager.getPosts());
+            // Tell the adapter that things have changed.
+            invalidate();
         }
 
         @Override

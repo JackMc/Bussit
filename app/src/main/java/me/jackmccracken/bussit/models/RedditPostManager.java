@@ -9,7 +9,7 @@ import java.util.List;
 import me.jackmccracken.bussit.ReaderActivity;
 import me.jackmccracken.bussit.utils.AfterCallTask;
 import me.jackmccracken.bussit.utils.DatabaseHelper;
-import me.jackmccracken.bussit.utils.RedditAPIHelper;
+import android.content.Context;
 
 /**
  * Created by jack on 05/02/15.
@@ -17,7 +17,7 @@ import me.jackmccracken.bussit.utils.RedditAPIHelper;
 public class RedditPostManager implements PostManager {
     private List<Post> posts = new ArrayList<>();
     private APIHelper helper;
-    private ReaderActivity context;
+    private Context context;
 
     public RedditPostManager(ReaderActivity context, APIHelper helper) {
         this.helper = helper;
@@ -69,7 +69,6 @@ public class RedditPostManager implements PostManager {
         // This is because then we can just invalidate the adapter to make the newPosts appear.
         this.posts.clear();
         this.posts.addAll(newPosts);
-        context.invalidate();
     }
 
     @Override
