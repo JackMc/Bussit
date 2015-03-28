@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <me.jackmccracken.bussit.utils.TimePreference
+        android:key="when_alarm"
+        android:title="Select a time when we should download posts"/>
+</PreferenceScreen>

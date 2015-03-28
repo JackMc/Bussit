@@ -36,6 +36,7 @@ public class ReaderActivity extends ActionBarActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_reader);
 
         // Database setup
@@ -92,7 +93,8 @@ public class ReaderActivity extends ActionBarActivity
 
     private boolean isWifiConnected() {
         return connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI).getState()
-                == NetworkInfo.State.CONNECTED;
+                == NetworkInfo.State.CONNECTED ||
+               connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE).getState() == NetworkInfo.State.CONNECTED;
     }
 
     @Override
@@ -111,6 +113,8 @@ public class ReaderActivity extends ActionBarActivity
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            Intent i = new Intent(this, SettingsActivity.class);
+            startActivity(i);
             return true;
         }
 
