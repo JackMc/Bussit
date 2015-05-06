@@ -4,11 +4,13 @@ import android.app.Activity;
 import android.support.v4.app.NavUtils;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.webkit.WebView;
 
 import me.jackmccracken.bussit.models.Post;
+import me.jackmccracken.bussit.utils.BasicUtils;
 
 
 public class WebViewerActivity extends ActionBarActivity {
@@ -25,8 +27,17 @@ public class WebViewerActivity extends ActionBarActivity {
 
         post = getIntent().getParcelableExtra("post");
 
-        // Go to the link stored in the post
-        web.loadUrl(post.getURL());
+        // Either use cached content if we're not connected or load it if we can
+        if (BasicUtils.isWifiConnected(this)) {
+            // Go to the link stored in the post
+            web.loadUrl(post.getURL());
+        }
+        else if (post.getContent() != null) {
+            web.loadData(post.getContent(), "text/html", "UTF-8");
+        }
+        else {
+            Log.e("RenderWeb", "WiFi is not connected and post is not cached. :(");
+        }
 
         // Display the back button.
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);

@@ -17,21 +17,20 @@ import android.widget.Toast;
 
 import me.jackmccracken.bussit.adapters.PostAdapter;
 import me.jackmccracken.bussit.models.APIHelper;
+import me.jackmccracken.bussit.models.MockAPIHelper;
+import me.jackmccracken.bussit.models.MockPostManager;
 import me.jackmccracken.bussit.models.PostManager;
 import me.jackmccracken.bussit.models.RedditPostManager;
 import me.jackmccracken.bussit.utils.AfterCallTask;
+import me.jackmccracken.bussit.utils.BasicUtils;
 import me.jackmccracken.bussit.utils.DatabaseHelper;
 import me.jackmccracken.bussit.utils.RedditAPIHelper;
 
 public class ReaderActivity extends ActionBarActivity
         implements SwipeRefreshLayout.OnRefreshListener {
-    private ListView postsView;
     private PostManager postManager;
-    private APIHelper helper;
     private PostAdapter adapter;
-    private SharedPreferences preferences;
     private SwipeRefreshLayout refreshView;
-    private ConnectivityManager connectivityManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,11 +41,11 @@ public class ReaderActivity extends ActionBarActivity
         // Database setup
         DatabaseHelper.makeInstance(this);
 
-        postsView = (ListView)findViewById(R.id.main_posts);
+        ListView postsView = (ListView) findViewById(R.id.main_posts);
 
-        preferences = getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
 
-        helper = new RedditAPIHelper(preferences);
+        APIHelper helper = new RedditAPIHelper(preferences);
         postManager = new RedditPostManager(this, helper);
 
         adapter = new PostAdapter(this, postManager);
@@ -59,18 +58,18 @@ public class ReaderActivity extends ActionBarActivity
 
         // If we need to get full authentication (ask the API helper),
         // then bring up a RedditLoginActivity
-        connectivityManager = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        if (helper.needsFullPermission() && isWifiConnected()) {
+        if (helper.needsFullPermission() && BasicUtils.isWifiConnected(connectivityManager)) {
             Log.d("StartState", "Obtaining token.");
             Intent openLogin = new Intent();
             openLogin.setClass(this, RedditLoginActivity.class);
 
             startActivityForResult(openLogin, RedditLoginActivity.FULL_LOGIN);
-        } else if (helper.needsFullPermission() && !isWifiConnected()) {
+        } else if (helper.needsFullPermission() && !BasicUtils.isWifiConnected(connectivityManager)) {
             Toast.makeText(this, "Warning: You must start this app with WiFi connected the first time you launch it.",
                     Toast.LENGTH_LONG).show();
-        } else if (helper.needsTokenRefresh() && isWifiConnected()) {
+        } else if (helper.needsTokenRefresh() && BasicUtils.isWifiConnected(connectivityManager)) {
             Log.d("StartState", "Obtaining refreshed token.");
             helper.refreshTokens(this, new AfterCallTask<Void>() {
                 @Override
@@ -89,12 +88,6 @@ public class ReaderActivity extends ActionBarActivity
             Log.d("StartState", "Cached read.");
             postManager.cachedUpdate(null);
         }
-    }
-
-    private boolean isWifiConnected() {
-        return connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI).getState()
-                == NetworkInfo.State.CONNECTED ||
-               connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE).getState() == NetworkInfo.State.CONNECTED;
     }
 
     @Override

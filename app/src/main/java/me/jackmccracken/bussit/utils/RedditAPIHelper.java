@@ -30,6 +30,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -289,10 +290,11 @@ public class RedditAPIHelper implements APIHelper {
 
             for (int i = 0; i < pageChildren.length(); i++) {
                 JSONObject postData = pageChildren.getJSONObject(i).getJSONObject("data");
-                posts.add(new Post(postData.getString("title"),
-                                   "/r/" + postData.getString("subreddit"),
-                                   postData.getString("url"),
-                                   postData.getString("id")));
+
+                posts.add(DatabaseHelper.getInstance().makePost(postData.getString("title"),
+                                               "/r/" + postData.getString("subreddit"),
+                                               postData.getString("url"),
+                                               postData.getString("id")));
             }
         } catch (JSONException e) {
             e.printStackTrace();
@@ -336,7 +338,7 @@ public class RedditAPIHelper implements APIHelper {
                     HttpEntity entity = response.getEntity();
 
                     if (entity != null) {
-                        JSONObject object = new JSONObject(convertToString(entity.getContent()));
+                        JSONObject object = new JSONObject(BasicUtils.convertToString(entity.getContent()));
 
                         List<Post> posts = jsonToPosts(object);
 
@@ -405,7 +407,7 @@ public class RedditAPIHelper implements APIHelper {
 
             if (entity != null) {
                 InputStream stream = entity.getContent();
-                String result = convertToString(stream);
+                String result = BasicUtils.convertToString(stream);
                 JSONObject object = new JSONObject(result);
 
                 token = object.getString("access_token");
@@ -433,28 +435,6 @@ public class RedditAPIHelper implements APIHelper {
 
         // Put the changes into the file.
         editor.apply();
-    }
-
-    private String convertToString(InputStream stream) {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-        StringBuilder builder = new StringBuilder();
-
-        String line;
-        try {
-            while ((line = reader.readLine()) != null) {
-                builder.append(line).append("\n");
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                stream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        return builder.toString();
     }
 
     /**
@@ -514,7 +494,6 @@ public class RedditAPIHelper implements APIHelper {
                 post.setEntity(new UrlEncodedFormEntity(params));
 
                 setupBasicAuthHeaders(post, c);
-
                 HttpResponse response = client.execute(post);
 
                 HttpEntity entity = response.getEntity();
@@ -523,7 +502,7 @@ public class RedditAPIHelper implements APIHelper {
                     // Err on the side of caution.
                     long beforeRequestTime = System.currentTimeMillis();
                     InputStream stream = entity.getContent();
-                    String result = convertToString(stream);
+                    String result = BasicUtils.convertToString(stream);
                     JSONObject object = new JSONObject(result);
                     token = object.getString("access_token");
                     // (*1000) because we need to convert to milliseconds.
@@ -532,6 +511,7 @@ public class RedditAPIHelper implements APIHelper {
                     return true;
                 }
             } catch (IOException | JSONException e) {
+
                 e.printStackTrace();
             } finally {
                 refreshing = false;
