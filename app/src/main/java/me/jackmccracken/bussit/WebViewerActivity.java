@@ -8,6 +8,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 
 import me.jackmccracken.bussit.models.Post;
 import me.jackmccracken.bussit.utils.BasicUtils;
@@ -24,6 +25,12 @@ public class WebViewerActivity extends ActionBarActivity {
         setContentView(R.layout.activity_web_viewer);
 
         web = (WebView)findViewById(R.id.reader_web);
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                return false;
+            }
+        });
 
         post = getIntent().getParcelableExtra("post");
 

@@ -9,6 +9,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.Calendar;
 
 import me.jackmccracken.bussit.R;
@@ -16,7 +19,7 @@ import me.jackmccracken.bussit.R;
 /**
  * Created by jack on 05/02/15.
  */
-public class Post implements Parcelable {
+public class Post extends Thing implements Parcelable {
     // Required to make a Parcelable.
     public static final Creator<Post> CREATOR = new Creator<Post>() {
         @Override
@@ -33,16 +36,15 @@ public class Post implements Parcelable {
     private String title;
     private String subreddit;
     private String url;
-    private String thingId;
     // HTML content.
     private String content;
     private Calendar lastMod;
 
     public Post(String title, String subreddit, String url, String thingId, String content, long lastModMillis) {
+        super(thingId, "post");
         this.title = title;
         this.subreddit = subreddit;
         this.url = url;
-        this.thingId = thingId;
         this.content = content;
 
         if (lastModMillis >= 0) {
@@ -101,10 +103,6 @@ public class Post implements Parcelable {
         return subreddit;
     }
 
-    public String getThingId() {
-        return thingId;
-    }
-
     public String getContent() {
         return content;
     }
@@ -130,5 +128,37 @@ public class Post implements Parcelable {
 
     public long getLastMod() {
         return lastMod == null ? -1 : lastMod.getTimeInMillis();
+    }
+
+    public static Post fromJSON(JSONObject jsonObject) {
+        try {
+            return new Post(
+                    jsonObject.getString("title"),
+                    jsonObject.getString("subreddit"),
+                    jsonObject.getString("url"),
+                    jsonObject.getString("thingId"),
+                    jsonObject.getString("content"),
+                    jsonObject.getLong("lastMod"));
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public JSONObject toJSON() {
+        JSONObject object = new JSONObject();
+
+        try {
+            object.put("title", title);
+            object.put("subreddit", subreddit);
+            object.put("url", url);
+            object.put("thingId", thingId);
+            object.put("content", content);
+            object.put("lastMod", lastMod.getTimeInMillis());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return object;
     }
 }
